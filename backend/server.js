@@ -93,7 +93,7 @@ app.post('/api/summarize', async (req, res) => {
 
         // Call Claude 3 Opus
         const msg = await anthropic.messages.create({
-            model: "claude-3-opus-20240229",
+            model: "claude-3-5-sonnet-20241022",
             max_tokens: 2000,
             temperature: 0.2,
             messages: [{ role: "user", content: prompt }]
