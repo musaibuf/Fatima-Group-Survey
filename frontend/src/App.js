@@ -5,7 +5,6 @@ import { Container, TextField, Button, Typography, Box, Paper, Alert } from '@mu
 import axios from 'axios';
 import Dashboard from './Dashboard';
 
-// This safely removes any accidental trailing slash from your Render URL
 const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const API_URL = rawApiUrl.replace(/\/$/, '');
 
@@ -21,12 +20,10 @@ function SurveyForm() {
     e.preventDefault();
     setStatus(null);
     try {
-      console.log("Attempting to submit to:", `${API_URL}/api/responses`);
       await axios.post(`${API_URL}/api/responses`, formData);
       setStatus('success');
       setFormData({ q1: '', q2: '', q3: '' });
     } catch (error) {
-      console.error("Submission error:", error);
       setStatus('error');
     }
   };
@@ -35,7 +32,8 @@ function SurveyForm() {
     <Container maxWidth="sm">
       <Box sx={{ mt: 5, mb: 5 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h5" gutterBottom fontWeight="bold" color="primary">
+          {/* Grass Green Heading */}
+          <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ color: '#4CAF50' }}>
             Fatima Group Collaboration Survey
           </Typography>
           
@@ -59,7 +57,8 @@ function SurveyForm() {
             <TextField fullWidth multiline rows={3} name="q3" value={formData.q3} onChange={handleChange} required variant="outlined" />
 
             <Box sx={{ mt: 4 }}>
-              <Button type="submit" variant="contained" color="primary" size="large" fullWidth>
+              {/* Grass Green Button */}
+              <Button type="submit" variant="contained" size="large" fullWidth sx={{ bgcolor: '#4CAF50', '&:hover': { bgcolor: '#388E3C' } }}>
                 Submit Response
               </Button>
             </Box>

@@ -3,13 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { Container, Typography, Box, Paper, Button, CircularProgress, Card, CardContent, Divider } from '@mui/material';
 import axios from 'axios';
 
-// Safely remove trailing slash here too
 const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const API_URL = rawApiUrl.replace(/\/$/, '');
 
 function Dashboard() {
   const [responses, setResponses] = useState([]);
-  const [summary, setSummary] = useState('');
+  const [summaryStatus, setSummaryStatus] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
@@ -25,66 +24,72 @@ function Dashboard() {
     }
   };
 
-const generateSummary = async () => {
+  const generateSummary = async () => {
     setLoadingSummary(true);
-    setSummary(''); // Clear previous summary/errors
+    setSummaryStatus('Analyzing data with Claude Opus and generating PPTX...');
+    
     try {
-      const res = await axios.post(`${API_URL}/api/summarize`);
-      setSummary(res.data.summary);
+      // Tell Axios we are expecting a file (blob) back
+      const res = await axios.post(`${API_URL}/api/summarize`, {}, { responseType: 'blob' });
+      
+      // Create a download link for the PPTX file
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Fatima_Group_Analysis.pptx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setSummaryStatus('✅ Presentation downloaded successfully!');
     } catch (error) {
       console.error("Error generating summary", error);
-      // Display the exact error sent from the backend
-      if (error.response && error.response.data && error.response.data.details) {
-        setSummary(`❌ AI Error: ${error.response.data.details}`);
-      } else {
-        setSummary("❌ Failed to generate summary. Please check backend logs.");
-      }
+      setSummaryStatus("❌ Failed to generate presentation. Check backend logs.");
     }
     setLoadingSummary(false);
   };
+
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 5, mb: 5 }}>
-        <Typography variant="h4" gutterBottom fontWeight="bold">
+        <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ color: '#4CAF50' }}>
           Survey Responses Dashboard
         </Typography>
 
         {/* AI Summary Section */}
         <Paper elevation={3} sx={{ p: 4, mb: 4, bgcolor: '#f3f6f9' }}>
-          <Typography variant="h5" gutterBottom color="primary">
-            AI Theme Analysis (Gemini Flash)
+          <Typography variant="h5" gutterBottom sx={{ color: '#4CAF50', fontWeight: 'bold' }}>
+            AI Presentation Generator (Claude Opus)
           </Typography>
           <Typography variant="body2" color="textSecondary" gutterBottom>
-            Click the button below to analyze all responses and find 3-5 common themes.
+            Click below to analyze all responses, extract themes and buzzwords, and download a PowerPoint presentation.
           </Typography>
           
           <Box sx={{ mt: 2, mb: 2 }}>
             <Button 
               variant="contained" 
-              color="secondary" 
               onClick={generateSummary} 
               disabled={loadingSummary || responses.length === 0}
+              sx={{ bgcolor: '#4CAF50', '&:hover': { bgcolor: '#388E3C' } }}
             >
-              {loadingSummary ? <CircularProgress size={24} color="inherit" /> : "Generate AI Summary"}
+              {loadingSummary ? <CircularProgress size={24} color="inherit" /> : "Generate & Download PPTX"}
             </Button>
           </Box>
 
-          {summary && (
-            <Box sx={{ mt: 3, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #ddd' }}>
-              <Typography component="div" sx={{ whiteSpace: 'pre-wrap' }}>
-                {summary}
-              </Typography>
-            </Box>
+          {summaryStatus && (
+            <Typography variant="subtitle1" sx={{ mt: 2, fontWeight: 'bold', color: summaryStatus.includes('❌') ? 'red' : '#4CAF50' }}>
+              {summaryStatus}
+            </Typography>
           )}
         </Paper>
 
         {/* Individual Responses Section */}
-        <Typography variant="h5" gutterBottom>
+        <Typography variant="h5" gutterBottom sx={{ color: '#4CAF50', fontWeight: 'bold' }}>
           All Individual Responses ({responses.length})
         </Typography>
         
         {responses.map((res, index) => (
-          <Card key={res.id} sx={{ mb: 3 }}>
+          <Card key={res.id} sx={{ mb: 3, borderLeft: '5px solid #4CAF50' }}>
             <CardContent>
               <Typography variant="subtitle2" color="textSecondary">
                 Response #{responses.length - index} - {new Date(res.created_at).toLocaleDateString()}
