@@ -1,4 +1,4 @@
-// server.js
+// backend/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -9,11 +9,27 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// PostgreSQL Connection (Render ready)
+// PostgreSQL Connection
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Required for Render/Neon/Supabase
+    ssl: { rejectUnauthorized: false } // Required for Render
 });
+
+// --- NEW: Automatically create table if it doesn't exist ---
+const createTableQuery = `
+CREATE TABLE IF NOT EXISTS responses (
+    id SERIAL PRIMARY KEY,
+    q1 TEXT NOT NULL,
+    q2 TEXT NOT NULL,
+    q3 TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+`;
+
+pool.query(createTableQuery)
+    .then(() => console.log("Database table 'responses' is ready."))
+    .catch(err => console.error("Error creating table:", err));
+// -----------------------------------------------------------
 
 // Gemini AI Setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -47,7 +63,6 @@ app.get('/api/responses', async (req, res) => {
 // 3. API to Summarize with Gemini
 app.post('/api/summarize', async (req, res) => {
     try {
-        // Fetch all responses
         const result = await pool.query('SELECT q1, q2, q3 FROM responses');
         const responses = result.rows;
 
@@ -55,9 +70,8 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'No responses to summarize.' });
         }
 
-        // Format data for the AI prompt
         let promptData = responses.map((r, index) => 
-            `Response ${index + 1}:\nQ1 (Tenure/Collaboration): ${r.q1}\nQ2 (Shortcomings): ${r.q2}\nQ3 (Improvements): ${r.q3}\n`
+            `Response ${index + 1}:\nQ1: ${r.q1}\nQ2: ${r.q2}\nQ3: ${r.q3}\n`
         ).join('\n');
 
         const prompt = `
@@ -69,7 +83,6 @@ app.post('/api/summarize', async (req, res) => {
         ${promptData}
         `;
 
-        // Call Gemini 1.5 Flash
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const aiResult = await model.generateContent(prompt);
         const responseText = aiResult.response.text();
