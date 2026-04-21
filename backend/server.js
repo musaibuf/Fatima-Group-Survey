@@ -72,20 +72,27 @@ app.post('/api/summarize', async (req, res) => {
         ).join('\n');
 
         const prompt = `
-        You are an HR analyst. Analyze the following employee feedback regarding collaboration at Fatima Group.
-        Identify 3 to 5 common themes and a list of 5 to 10 buzzwords used by the employees.
-        
-        You MUST return ONLY a valid JSON object. Do not include any introductory text, and do not use markdown formatting. Just the raw JSON.
-        {
-          "buzzwords": ["word1", "word2", "word3"],
-          "themes": [
-            { "title": "Theme Title", "description": "Detailed description of the theme based on the data." }
-          ]
-        }
-        
-        Data:
-        ${promptData}
-        `;
+You are a senior HR analyst specializing in organizational behavior and workplace culture.
+
+Below are employee survey responses about collaboration at Fatima Group. Your job is to:
+1. Identify 3–5 recurring THEMES — patterns in how employees feel, what they struggle with, or what they value most. Each theme should have a short punchy title and a 2–3 sentence description grounded in the actual responses.
+2. Extract 5–10 BUZZWORDS — specific words or short phrases that multiple employees used or that best capture the sentiment of the responses (e.g. "silos", "ownership", "clarity").
+3. Write a brief OVERALL SUMMARY (2–3 sentences) that captures the big picture of what employees are saying about collaboration.
+
+Be specific and analytical — avoid vague corporate-speak. Base everything on what the data actually says.
+
+You MUST return ONLY a valid JSON object. No introductory text, no markdown, no backticks. Raw JSON only.
+{
+  "summary": "Overall summary here.",
+  "buzzwords": ["word1", "word2", "word3"],
+  "themes": [
+    { "title": "Theme Title", "description": "2–3 sentence description grounded in the responses." }
+  ]
+}
+
+Survey Data:
+${promptData}
+`;
 
         if (!process.env.ANTHROPIC_API_KEY) {
             throw new Error("ANTHROPIC_API_KEY is missing on the server.");
@@ -93,7 +100,7 @@ app.post('/api/summarize', async (req, res) => {
 
         // Call Claude 3 Opus
         const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
+            model: "claude-opus-4-6",
             max_tokens: 2000,
             temperature: 0.2,
             messages: [{ role: "user", content: prompt }]
@@ -118,8 +125,12 @@ app.post('/api/summarize', async (req, res) => {
         slide1.addText("Collaboration Survey Analysis", { x: 0.5, y: 2.5, w: 9, fontSize: 24, color: "333333", align: "center" });
 
         let slide2 = pres.addSlide();
-        slide2.addText("Common Buzzwords", { x: 0.5, y: 0.5, w: 9, fontSize: 28, bold: true, color: "4CAF50" });
-        slide2.addText(parsedData.buzzwords.join(" • "), { x: 0.5, y: 1.5, w: 9, fontSize: 20, color: "555555" });
+        slide2.addText("Executive Summary", { x: 0.5, y: 0.5, w: 9, fontSize: 28, bold: true, color: "4CAF50" });
+        slide2.addText(parsedData.summary, { x: 0.5, y: 1.5, w: 9, fontSize: 18, color: "333333" });
+
+        let slide3 = pres.addSlide();
+        slide3.addText("Common Buzzwords", { x: 0.5, y: 0.5, w: 9, fontSize: 28, bold: true, color: "4CAF50" });
+        slide3.addText(parsedData.buzzwords.join(" • "), { x: 0.5, y: 1.5, w: 9, fontSize: 20, color: "555555" });
 
         parsedData.themes.forEach((theme, idx) => {
             let slide = pres.addSlide();
