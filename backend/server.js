@@ -57,6 +57,7 @@ app.get('/api/responses', async (req, res) => {
 });
 
 // 3. API to Summarize with Claude & Generate PPTX
+// 3. API to Summarize with Claude & Generate PPTX
 app.post('/api/summarize', async (req, res) => {
     try {
         const result = await pool.query('SELECT q1, q2, q3 FROM responses');
@@ -74,7 +75,7 @@ app.post('/api/summarize', async (req, res) => {
         You are an HR analyst. Analyze the following employee feedback regarding collaboration at Fatima Group.
         Identify 3 to 5 common themes and a list of 5 to 10 buzzwords used by the employees.
         
-        You MUST return ONLY a valid JSON object with this exact structure. Do not include markdown formatting like \`\`\`json.
+        You MUST return ONLY a valid JSON object. Do not include any introductory text, and do not use markdown formatting. Just the raw JSON.
         {
           "buzzwords": ["word1", "word2", "word3"],
           "themes": [
@@ -98,34 +99,34 @@ app.post('/api/summarize', async (req, res) => {
             messages: [{ role: "user", content: prompt }]
         });
 
-        // Clean up Claude's response in case it adds markdown
         let rawText = msg.content[0].text.trim();
-        if (rawText.startsWith('```json')) rawText = rawText.replace(/```json/g, '');
-        if (rawText.endsWith('```')) rawText = rawText.replace(/```/g, '');
         
-        const parsedData = JSON.parse(rawText);
+        // BULLETPROOF JSON EXTRACTION: Find the first '{' and last '}'
+        const firstBrace = rawText.indexOf('{');
+        const lastBrace = rawText.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace === -1) {
+            throw new Error("Claude did not return valid JSON.");
+        }
+        const jsonString = rawText.substring(firstBrace, lastBrace + 1);
+        const parsedData = JSON.parse(jsonString);
 
         // Generate PowerPoint
         let pres = new PptxGenJS();
         
-        // Slide 1: Title
         let slide1 = pres.addSlide();
         slide1.addText("Fatima Group", { x: 0.5, y: 1.5, w: 9, fontSize: 36, bold: true, color: "4CAF50", align: "center" });
         slide1.addText("Collaboration Survey Analysis", { x: 0.5, y: 2.5, w: 9, fontSize: 24, color: "333333", align: "center" });
 
-        // Slide 2: Buzzwords
         let slide2 = pres.addSlide();
         slide2.addText("Common Buzzwords", { x: 0.5, y: 0.5, w: 9, fontSize: 28, bold: true, color: "4CAF50" });
         slide2.addText(parsedData.buzzwords.join(" • "), { x: 0.5, y: 1.5, w: 9, fontSize: 20, color: "555555" });
 
-        // Slides 3+: Themes
         parsedData.themes.forEach((theme, idx) => {
             let slide = pres.addSlide();
             slide.addText(`Theme ${idx + 1}: ${theme.title}`, { x: 0.5, y: 0.5, w: 9, fontSize: 24, bold: true, color: "4CAF50" });
             slide.addText(theme.description, { x: 0.5, y: 1.5, w: 9, fontSize: 18, color: "333333" });
         });
 
-        // Send PPTX as a downloadable file
         const buffer = await pres.write('nodebuffer');
         res.writeHead(200, {
             'Content-Disposition': 'attachment; filename="Fatima_Group_Analysis.pptx"',

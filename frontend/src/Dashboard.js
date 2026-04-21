@@ -24,15 +24,13 @@ function Dashboard() {
     }
   };
 
-  const generateSummary = async () => {
+const generateSummary = async () => {
     setLoadingSummary(true);
     setSummaryStatus('Analyzing data with Claude Opus and generating PPTX...');
     
     try {
-      // Tell Axios we are expecting a file (blob) back
       const res = await axios.post(`${API_URL}/api/summarize`, {}, { responseType: 'blob' });
       
-      // Create a download link for the PPTX file
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -44,7 +42,19 @@ function Dashboard() {
       setSummaryStatus('✅ Presentation downloaded successfully!');
     } catch (error) {
       console.error("Error generating summary", error);
-      setSummaryStatus("❌ Failed to generate presentation. Check backend logs.");
+      
+      // Safely read the error message from the Blob
+      if (error.response && error.response.data instanceof Blob) {
+        const text = await error.response.data.text();
+        try {
+          const errData = JSON.parse(text);
+          setSummaryStatus(`❌ Error: ${errData.details}`);
+        } catch (e) {
+          setSummaryStatus("❌ Failed to generate presentation. Check backend logs.");
+        }
+      } else {
+        setSummaryStatus("❌ Failed to connect to the server.");
+      }
     }
     setLoadingSummary(false);
   };
