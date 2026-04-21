@@ -57,7 +57,6 @@ app.get('/api/responses', async (req, res) => {
 });
 
 // 3. API to Summarize with Claude & Generate PPTX
-// 3. API to Summarize with Claude & Generate PPTX
 app.post('/api/summarize', async (req, res) => {
     try {
         const result = await pool.query('SELECT q1, q2, q3 FROM responses');
@@ -78,6 +77,7 @@ Below are employee survey responses about collaboration at Fatima Group. Your jo
 1. Identify 3–5 recurring THEMES — patterns in how employees feel, what they struggle with, or what they value most. Each theme should have a short punchy title and a 2–3 sentence description grounded in the actual responses.
 2. Extract 5–10 BUZZWORDS — specific words or short phrases that multiple employees used or that best capture the sentiment of the responses (e.g. "silos", "ownership", "clarity").
 3. Write a brief OVERALL SUMMARY (2–3 sentences) that captures the big picture of what employees are saying about collaboration.
+4. Generate a SLIDES array for a PowerPoint presentation. You must include slides for the summary, buzzwords, and each theme — but feel free to add any extra slides if you spot something interesting, surprising, or worth highlighting (e.g. a standout pattern, a concern that needs urgent attention, a positive trend worth celebrating, a recommendation). Be creative and analytical. Each slide needs a short punchy title and concise body content.
 
 Be specific and analytical — avoid vague corporate-speak. Base everything on what the data actually says.
 
@@ -87,6 +87,9 @@ You MUST return ONLY a valid JSON object. No introductory text, no markdown, no 
   "buzzwords": ["word1", "word2", "word3"],
   "themes": [
     { "title": "Theme Title", "description": "2–3 sentence description grounded in the responses." }
+  ],
+  "slides": [
+    { "title": "Slide Title", "content": "Slide body text." }
   ]
 }
 
@@ -98,7 +101,6 @@ ${promptData}
             throw new Error("ANTHROPIC_API_KEY is missing on the server.");
         }
 
-        // Call Claude 3 Opus
         const msg = await anthropic.messages.create({
             model: "claude-opus-4-6",
             max_tokens: 2000,
@@ -107,7 +109,7 @@ ${promptData}
         });
 
         let rawText = msg.content[0].text.trim();
-        
+
         // BULLETPROOF JSON EXTRACTION: Find the first '{' and last '}'
         const firstBrace = rawText.indexOf('{');
         const lastBrace = rawText.lastIndexOf('}');
@@ -119,23 +121,17 @@ ${promptData}
 
         // Generate PowerPoint
         let pres = new PptxGenJS();
-        
-        let slide1 = pres.addSlide();
-        slide1.addText("Fatima Group", { x: 0.5, y: 1.5, w: 9, fontSize: 36, bold: true, color: "4CAF50", align: "center" });
-        slide1.addText("Collaboration Survey Analysis", { x: 0.5, y: 2.5, w: 9, fontSize: 24, color: "333333", align: "center" });
 
-        let slide2 = pres.addSlide();
-        slide2.addText("Executive Summary", { x: 0.5, y: 0.5, w: 9, fontSize: 28, bold: true, color: "4CAF50" });
-        slide2.addText(parsedData.summary, { x: 0.5, y: 1.5, w: 9, fontSize: 18, color: "333333" });
+        // Title slide (always hardcoded)
+        let titleSlide = pres.addSlide();
+        titleSlide.addText("Fatima Group", { x: 0.5, y: 1.5, w: 9, fontSize: 36, bold: true, color: "4CAF50", align: "center" });
+        titleSlide.addText("Collaboration Survey Analysis", { x: 0.5, y: 2.5, w: 9, fontSize: 24, color: "333333", align: "center" });
 
-        let slide3 = pres.addSlide();
-        slide3.addText("Common Buzzwords", { x: 0.5, y: 0.5, w: 9, fontSize: 28, bold: true, color: "4CAF50" });
-        slide3.addText(parsedData.buzzwords.join(" • "), { x: 0.5, y: 1.5, w: 9, fontSize: 20, color: "555555" });
-
-        parsedData.themes.forEach((theme, idx) => {
+        // Let Opus drive the rest
+        parsedData.slides.forEach((s) => {
             let slide = pres.addSlide();
-            slide.addText(`Theme ${idx + 1}: ${theme.title}`, { x: 0.5, y: 0.5, w: 9, fontSize: 24, bold: true, color: "4CAF50" });
-            slide.addText(theme.description, { x: 0.5, y: 1.5, w: 9, fontSize: 18, color: "333333" });
+            slide.addText(s.title, { x: 0.5, y: 0.5, w: 9, fontSize: 26, bold: true, color: "4CAF50" });
+            slide.addText(s.content, { x: 0.5, y: 1.5, w: 9, fontSize: 18, color: "333333" });
         });
 
         const buffer = await pres.write('nodebuffer');
