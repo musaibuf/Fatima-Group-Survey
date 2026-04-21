@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { Container, TextField, Button, Typography, Box, Paper, Alert } from '@mui/material';
 import axios from 'axios';
 import Dashboard from './Dashboard';
@@ -8,7 +8,9 @@ import Dashboard from './Dashboard';
 const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const API_URL = rawApiUrl.replace(/\/$/, '');
 
+// --- 1. The Survey Form Component ---
 function SurveyForm() {
+  const navigate = useNavigate(); // Used to redirect the user
   const [formData, setFormData] = useState({ q1: '', q2: '', q3: '' });
   const [status, setStatus] = useState(null);
 
@@ -21,8 +23,8 @@ function SurveyForm() {
     setStatus(null);
     try {
       await axios.post(`${API_URL}/api/responses`, formData);
-      setStatus('success');
-      setFormData({ q1: '', q2: '', q3: '' });
+      // On success, instantly redirect to the Thank You page
+      navigate('/thank-you');
     } catch (error) {
       setStatus('error');
     }
@@ -32,12 +34,10 @@ function SurveyForm() {
     <Container maxWidth="sm">
       <Box sx={{ mt: 5, mb: 5 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          {/* Grass Green Heading */}
           <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ color: '#4CAF50' }}>
-            Fatima Group Collaboration Survey
+            Kick Off Survey
           </Typography>
           
-          {status === 'success' && <Alert severity="success" sx={{ mb: 2 }}>Response submitted successfully!</Alert>}
           {status === 'error' && <Alert severity="error" sx={{ mb: 2 }}>Failed to submit response. Please try again.</Alert>}
 
           <form onSubmit={handleSubmit}>
@@ -57,7 +57,6 @@ function SurveyForm() {
             <TextField fullWidth multiline rows={3} name="q3" value={formData.q3} onChange={handleChange} required variant="outlined" />
 
             <Box sx={{ mt: 4 }}>
-              {/* Grass Green Button */}
               <Button type="submit" variant="contained" size="large" fullWidth sx={{ bgcolor: '#4CAF50', '&:hover': { bgcolor: '#388E3C' } }}>
                 Submit Response
               </Button>
@@ -69,11 +68,32 @@ function SurveyForm() {
   );
 }
 
+// --- 2. The New Thank You Page Component ---
+function ThankYou() {
+  return (
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 10, display: 'flex', justifyContent: 'center', textAlign: 'center' }}>
+        <Paper elevation={3} sx={{ p: 5, borderTop: '8px solid #4CAF50', width: '100%' }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ color: '#4CAF50', mb: 2 }}>
+            Thank You!
+          </Typography>
+          <Typography variant="h6" color="textSecondary">
+            Your response has been recorded.
+          </Typography>
+          {/* Notice: No buttons or links here! */}
+        </Paper>
+      </Box>
+    </Container>
+  );
+}
+
+// --- 3. Main App Router ---
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<SurveyForm />} />
+        <Route path="/thank-you" element={<ThankYou />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
