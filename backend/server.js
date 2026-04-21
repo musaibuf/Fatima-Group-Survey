@@ -103,7 +103,7 @@ ${promptData}
 
         const msg = await anthropic.messages.create({
             model: "claude-opus-4-6",
-            max_tokens: 2000,
+            max_tokens: 6000,
             temperature: 0.2,
             messages: [{ role: "user", content: prompt }]
         });
