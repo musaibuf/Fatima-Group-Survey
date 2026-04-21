@@ -1,14 +1,13 @@
 // src/Dashboard.js
 import React, { useEffect, useState } from 'react';
 import { Container, Typography, Box, Paper, Button, CircularProgress, Card, CardContent, Divider } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import ReactMarkdown from 'react-markdown'; // Optional: helps format Gemini's markdown output nicely
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Safely remove trailing slash here too
+const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = rawApiUrl.replace(/\/$/, '');
 
 function Dashboard() {
-  const navigate = useNavigate();
   const [responses, setResponses] = useState([]);
   const [summary, setSummary] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
@@ -41,10 +40,6 @@ function Dashboard() {
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 5, mb: 5 }}>
-        <Button variant="text" onClick={() => navigate('/')} sx={{ mb: 2 }}>
-          &larr; Back to Survey
-        </Button>
-        
         <Typography variant="h4" gutterBottom fontWeight="bold">
           Survey Responses Dashboard
         </Typography>
@@ -52,7 +47,7 @@ function Dashboard() {
         {/* AI Summary Section */}
         <Paper elevation={3} sx={{ p: 4, mb: 4, bgcolor: '#f3f6f9' }}>
           <Typography variant="h5" gutterBottom color="primary">
-            AI Theme Analysis
+            AI Theme Analysis (Gemini Flash)
           </Typography>
           <Typography variant="body2" color="textSecondary" gutterBottom>
             Click the button below to analyze all responses and find 3-5 common themes.
@@ -71,7 +66,6 @@ function Dashboard() {
 
           {summary && (
             <Box sx={{ mt: 3, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #ddd' }}>
-              {/* If you don't want to install react-markdown, you can just use <Typography sx={{ whiteSpace: 'pre-wrap' }}>{summary}</Typography> */}
               <Typography component="div" sx={{ whiteSpace: 'pre-wrap' }}>
                 {summary}
               </Typography>
