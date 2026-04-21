@@ -66,7 +66,7 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'No responses to summarize.' });
         }
 
-        let promptData = responses.map((r, index) => 
+        let promptData = responses.map((r, index) =>
             `Response ${index + 1}:\nQ1: ${r.q1}\nQ2: ${r.q2}\nQ3: ${r.q3}\n`
         ).join('\n');
 
@@ -119,21 +119,118 @@ ${promptData}
         const jsonString = rawText.substring(firstBrace, lastBrace + 1);
         const parsedData = JSON.parse(jsonString);
 
-        // Generate PowerPoint
+        // ── Design tokens ──────────────────────────────────────────────
+        const DARK_BG   = "1A2B3C";   // deep navy  — title / closing slides
+        const LIGHT_BG  = "F4F7FB";   // off-white  — content slides
+        const ACCENT    = "2ECC71";   // green accent
+        const ACCENT2   = "27AE60";   // darker green for shapes
+        const TEXT_DARK = "1A2B3C";   // body text on light bg
+        const TEXT_LITE = "FFFFFF";   // body text on dark bg
+        const MUTED     = "7F8C8D";   // caption / sub-text
+
+        // ── Generate PowerPoint ────────────────────────────────────────
         let pres = new PptxGenJS();
+        pres.layout = 'LAYOUT_16x9';
 
-        // Title slide (always hardcoded)
+        // ── Slide 1: Title (dark) ──────────────────────────────────────
         let titleSlide = pres.addSlide();
-        titleSlide.addText("Fatima Group", { x: 0.5, y: 1.5, w: 9, fontSize: 36, bold: true, color: "4CAF50", align: "center" });
-        titleSlide.addText("Collaboration Survey Analysis", { x: 0.5, y: 2.5, w: 9, fontSize: 24, color: "333333", align: "center" });
+        titleSlide.background = { color: DARK_BG };
 
-        // Let Opus drive the rest
-        parsedData.slides.forEach((s) => {
-            let slide = pres.addSlide();
-            slide.addText(s.title, { x: 0.5, y: 0.5, w: 9, fontSize: 26, bold: true, color: "4CAF50" });
-            slide.addText(s.content, { x: 0.5, y: 1.5, w: 9, fontSize: 18, color: "333333" });
+        // Accent bar on left
+        titleSlide.addShape(pres.shapes.RECTANGLE, {
+            x: 0, y: 0, w: 0.18, h: 5.625,
+            fill: { color: ACCENT }, line: { color: ACCENT }
         });
 
+        titleSlide.addText("Fatima Group", {
+            x: 0.5, y: 1.6, w: 9, h: 0.9,
+            fontSize: 44, bold: true, color: TEXT_LITE,
+            fontFace: "Calibri", align: "center"
+        });
+        titleSlide.addText("Collaboration Survey Analysis", {
+            x: 0.5, y: 2.6, w: 9, h: 0.6,
+            fontSize: 22, color: ACCENT, fontFace: "Calibri",
+            align: "center", charSpacing: 2
+        });
+        titleSlide.addText("Powered by Employee Feedback", {
+            x: 0.5, y: 3.4, w: 9, h: 0.4,
+            fontSize: 13, color: MUTED, fontFace: "Calibri",
+            align: "center", italic: true
+        });
+
+        // ── Helper: content slide (light bg) ──────────────────────────
+        function addContentSlide(titleText, bodyText) {
+            let slide = pres.addSlide();
+            slide.background = { color: LIGHT_BG };
+
+            // Top accent bar
+            slide.addShape(pres.shapes.RECTANGLE, {
+                x: 0, y: 0, w: 10, h: 0.08,
+                fill: { color: ACCENT }, line: { color: ACCENT }
+            });
+
+            // Left accent stripe behind title
+            slide.addShape(pres.shapes.RECTANGLE, {
+                x: 0.4, y: 0.3, w: 0.06, h: 0.75,
+                fill: { color: ACCENT2 }, line: { color: ACCENT2 }
+            });
+
+            // Title
+            slide.addText(titleText, {
+                x: 0.6, y: 0.28, w: 9.0, h: 0.8,
+                fontSize: 22, bold: true, color: TEXT_DARK,
+                fontFace: "Calibri", valign: "middle"
+            });
+
+            // Divider line
+            slide.addShape(pres.shapes.LINE, {
+                x: 0.4, y: 1.15, w: 9.2, h: 0,
+                line: { color: "D5E8F0", width: 1.2 }
+            });
+
+            // Body text card
+            slide.addShape(pres.shapes.RECTANGLE, {
+                x: 0.4, y: 1.3, w: 9.2, h: 3.8,
+                fill: { color: "FFFFFF" },
+                line: { color: "E0E9F4", width: 0.5 },
+                shadow: { type: "outer", blur: 8, offset: 2, angle: 135, color: "000000", opacity: 0.07 }
+            });
+
+            slide.addText(bodyText, {
+                x: 0.65, y: 1.45, w: 8.7, h: 3.5,
+                fontSize: 15, color: TEXT_DARK, fontFace: "Calibri",
+                valign: "top", wrap: true
+            });
+
+            return slide;
+        }
+
+        // ── Render all slides Opus decided ────────────────────────────
+        parsedData.slides.forEach((s) => {
+            addContentSlide(s.title, s.content);
+        });
+
+        // ── Last slide: closing (dark) ─────────────────────────────────
+        let endSlide = pres.addSlide();
+        endSlide.background = { color: DARK_BG };
+
+        endSlide.addShape(pres.shapes.RECTANGLE, {
+            x: 0, y: 0, w: 0.18, h: 5.625,
+            fill: { color: ACCENT }, line: { color: ACCENT }
+        });
+
+        endSlide.addText("Thank You", {
+            x: 0.5, y: 1.8, w: 9, h: 0.9,
+            fontSize: 40, bold: true, color: TEXT_LITE,
+            fontFace: "Calibri", align: "center"
+        });
+        endSlide.addText("Fatima Group · Collaboration Survey", {
+            x: 0.5, y: 2.85, w: 9, h: 0.45,
+            fontSize: 15, color: MUTED, fontFace: "Calibri",
+            align: "center", italic: true
+        });
+
+        // ── Write & send ───────────────────────────────────────────────
         const buffer = await pres.write('nodebuffer');
         res.writeHead(200, {
             'Content-Disposition': 'attachment; filename="Fatima_Group_Analysis.pptx"',
