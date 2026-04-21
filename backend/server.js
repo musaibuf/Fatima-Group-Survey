@@ -83,14 +83,20 @@ app.post('/api/summarize', async (req, res) => {
         ${promptData}
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Check if API key exists before calling Google
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY is missing on the server.");
+        }
+
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const aiResult = await model.generateContent(prompt);
         const responseText = aiResult.response.text();
 
         res.status(200).json({ summary: responseText });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'AI Summarization error' });
+        console.error("GEMINI ERROR:", err);
+        // Send the exact error message back to the frontend
+        res.status(500).json({ error: 'AI Summarization error', details: err.message });
     }
 });
 

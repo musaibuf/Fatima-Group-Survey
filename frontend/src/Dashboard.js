@@ -25,18 +25,23 @@ function Dashboard() {
     }
   };
 
-  const generateSummary = async () => {
+const generateSummary = async () => {
     setLoadingSummary(true);
+    setSummary(''); // Clear previous summary/errors
     try {
       const res = await axios.post(`${API_URL}/api/summarize`);
       setSummary(res.data.summary);
     } catch (error) {
       console.error("Error generating summary", error);
-      setSummary("Failed to generate summary. Please try again.");
+      // Display the exact error sent from the backend
+      if (error.response && error.response.data && error.response.data.details) {
+        setSummary(`❌ AI Error: ${error.response.data.details}`);
+      } else {
+        setSummary("❌ Failed to generate summary. Please check backend logs.");
+      }
     }
     setLoadingSummary(false);
   };
-
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 5, mb: 5 }}>
